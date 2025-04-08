@@ -1,4 +1,3 @@
-
 const Record = require('../models/recordModel');
 const User = require('../models/userModel');
 
@@ -50,7 +49,7 @@ const getRecordById = async (req, res) => {
 // @route   POST /api/records
 // @access  Private
 const createRecord = async (req, res) => {
-  const { patientId, description, observations, therapistId } = req.body;
+  const { patientId, patientName, diagnosis, treatment, notes, therapistId } = req.body;
   
   try {
     // Get therapist name
@@ -62,8 +61,10 @@ const createRecord = async (req, res) => {
     
     const record = await Record.create({
       patientId,
-      description,
-      observations,
+      patientName,
+      diagnosis,
+      treatment,
+      notes,
       therapistId,
       therapistName: therapist.name
     });
@@ -83,14 +84,15 @@ const createRecord = async (req, res) => {
 // @route   PUT /api/records/:id
 // @access  Private
 const updateRecord = async (req, res) => {
-  const { description, observations, therapistId } = req.body;
+  const { diagnosis, treatment, notes, therapistId } = req.body;
   
   try {
     const record = await Record.findById(req.params.id);
     
     if (record) {
-      record.description = description || record.description;
-      record.observations = observations || record.observations;
+      record.diagnosis = diagnosis || record.diagnosis;
+      record.treatment = treatment || record.treatment;
+      record.notes = notes || record.notes;
       
       // If therapist changed, update therapist name too
       if (therapistId && therapistId !== record.therapistId.toString()) {

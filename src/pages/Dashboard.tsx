@@ -1,72 +1,86 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import PatientCard from '@/components/PatientCard';
-import RecordCard from '@/components/RecordCard';
 import { Users, FileText, PlusCircle } from 'lucide-react';
-import { getPatients, mockMedicalRecords } from '@/lib/mockData';
+import { getPatients } from '@/services/patientService';
+import { getRecords } from '@/services/recordService';
 import { Patient, User, MedicalRecord } from '@/lib/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { user, logout } = useAuth();
   const [recentPatients, setRecentPatients] = useState<Patient[]>([]);
   const [recentRecords, setRecentRecords] = useState<MedicalRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem('movi-care-user');
-    if (!storedUser) {
-      navigate('/');
-      return;
-    }
+    const fetchData = async () => {
+      try {
+        // Buscar pacientes e prontuários
+        const [patientsData, recordsData] = await Promise.all([
+          getPatients(),
+          getRecords()
+        ]);
 
-    try {
-      const user = JSON.parse(storedUser);
-      setCurrentUser(user);
-      
-      // Get recent patients (last 3)
-      const allPatients = getPatients();
-      const sortedPatients = [...allPatients].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      setRecentPatients(sortedPatients.slice(0, 3));
-      
-      // Get recent records (last 3)
-      const sortedRecords = [...mockMedicalRecords].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      setRecentRecords(sortedRecords.slice(0, 3));
-    } catch (error) {
-      localStorage.removeItem('movi-care-user');
-      navigate('/');
-    }
-  }, [navigate]);
+        // Ordenar pacientes por data de criação (mais recentes primeiro)
+        const sortedPatients = [...patientsData].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setRecentPatients(sortedPatients.slice(0, 3));
 
-  const handleLogout = () => {
-    localStorage.removeItem('movi-care-user');
-    navigate('/');
-  };
+        // Ordenar prontuários por data de criação (mais recentes primeiro)
+        const sortedRecords = [...recordsData].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setRecentRecords(sortedRecords.slice(0, 3));
+      } catch (error) {
+        console.error('Erro ao buscar dados:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  if (!currentUser) {
-    return <div>Carregando...</div>;
+    fetchData();
+  }, []);
+
+  if (!user) {
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Navbar 
+          userName={user.name} 
+          userRole={user.role === 'admin' ? 'Administrador' : 'Fisioterapeuta'} 
+          onLogout={logout}
+        />
+        <main className="flex-grow p-4 sm:p-6">
+          <div className="app-container">
+            <div className="text-center p-8">
+              <p>Carregando dados...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar 
-        userName={currentUser.name} 
-        userRole={currentUser.role === 'admin' ? 'Administrador' : 'Fisioterapeuta'} 
-        onLogout={handleLogout} 
+        userName={user.name} 
+        userRole={user.role === 'admin' ? 'Administrador' : 'Fisioterapeuta'} 
+        onLogout={logout}
       />
       
       <main className="flex-grow p-4 sm:p-6">
         <div className="app-container">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold mb-2">Bem-vindo(a), {currentUser.name}!</h1>
+            <h1 className="text-2xl font-bold mb-2">Bem-vindo(a), {user.name}!</h1>
             <p className="text-gray-600">Confira as informações recentes do sistema.</p>
           </div>
           
@@ -116,7 +130,7 @@ const Dashboard: React.FC = () => {
                   <div className="space-y-3">
                     {recentRecords.map(record => (
                       <div key={record.id} className="p-3 bg-gray-50 rounded-md hover:bg-gray-100 cursor-pointer" onClick={() => navigate(`/patients/${record.patientId}`)}>
-                        <div className="font-medium">{record.description}</div>
+                        <div className="font-medium">{record.diagnosis}</div>
                         <div className="text-sm text-gray-500">Dr(a). {record.therapistName}</div>
                       </div>
                     ))}
@@ -138,7 +152,7 @@ const Dashboard: React.FC = () => {
             </Card>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/patients/new')}>
               <CardContent className="p-6 flex flex-col items-center justify-center text-center">
                 <PlusCircle className="h-12 w-12 mb-4 text-primary" />

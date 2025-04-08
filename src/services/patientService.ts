@@ -1,10 +1,9 @@
-
 import api from './api';
 import { Patient } from '@/lib/types';
 
 // Mapping function to transform backend format to frontend format
 const mapPatient = (patient: any): Patient => ({
-  id: patient._id,
+  id: patient._id || patient.id,
   name: patient.name,
   cpf: patient.cpf,
   birthDate: patient.birthDate,

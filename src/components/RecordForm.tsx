@@ -19,28 +19,59 @@ interface RecordFormProps {
 
 const RecordForm: React.FC<RecordFormProps> = ({ patientId, patientName, currentUser, onSuccess }) => {
   const [formData, setFormData] = useState({
-    description: '',
-    observations: '',
-    therapistId: currentUser.id
+    diagnosis: '',
+    treatment: '',
+    notes: '',
+    therapistId: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [therapists, setTherapists] = useState<User[]>([]);
+  const [isLoadingTherapists, setIsLoadingTherapists] = useState(true);
   
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchTherapists = async () => {
+      setIsLoadingTherapists(true);
       try {
+        console.log('Buscando fisioterapeutas...');
         const response = await api.get('/users');
-        const physiotherapists = response.data.filter((user: User) => user.role === 'physiotherapist');
+        console.log('Resposta da API:', response.data);
+        
+        const physiotherapists = response.data
+          .filter((user: User) => user.role === 'physiotherapist' && user._id)
+          .map((user: User) => ({
+            ...user,
+            id: user._id || user.id
+          }));
+          
+        console.log('Fisioterapeutas filtrados:', physiotherapists);
+        
         setTherapists(physiotherapists);
+        
+        // Se o usuário atual é um fisioterapeuta, seleciona ele por padrão
+        if (currentUser.role === 'physiotherapist' && (currentUser._id || currentUser.id)) {
+          setFormData(prev => ({ ...prev, therapistId: currentUser._id || currentUser.id }));
+        }
+        // Senão, seleciona o primeiro da lista
+        else if (physiotherapists.length > 0) {
+          setFormData(prev => ({ ...prev, therapistId: physiotherapists[0].id }));
+        }
       } catch (error) {
         console.error('Erro ao buscar fisioterapeutas:', error);
+        toast({
+          title: 'Erro ao carregar fisioterapeutas',
+          description: 'Não foi possível carregar a lista de fisioterapeutas. Por favor, tente novamente.',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsLoadingTherapists(false);
       }
     };
+    
     fetchTherapists();
-  }, []);
+  }, [currentUser]);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -48,13 +79,16 @@ const RecordForm: React.FC<RecordFormProps> = ({ patientId, patientName, current
   };
 
   const handleSelectChange = (value: string) => {
-    setFormData(prev => ({ ...prev, therapistId: value }));
+    console.log('Selecionando fisioterapeuta:', value);
+    if (value && value !== 'undefined') {
+      setFormData(prev => ({ ...prev, therapistId: value }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.description || !formData.therapistId) {
+    if (!formData.diagnosis || !formData.treatment || !formData.therapistId) {
       toast({
         title: 'Campos obrigatórios',
         description: 'Por favor, preencha todos os campos obrigatórios',
@@ -66,9 +100,20 @@ const RecordForm: React.FC<RecordFormProps> = ({ patientId, patientName, current
     setIsSubmitting(true);
     
     try {
+      const selectedTherapist = therapists.find(t => t.id === formData.therapistId);
+      
+      if (!selectedTherapist) {
+        throw new Error('Fisioterapeuta não encontrado');
+      }
+      
       await createRecord({
-        ...formData,
-        patientId
+        patientId,
+        patientName,
+        therapistId: formData.therapistId,
+        therapistName: selectedTherapist.name,
+        diagnosis: formData.diagnosis,
+        treatment: formData.treatment,
+        notes: formData.notes
       });
       
       toast({
@@ -82,6 +127,7 @@ const RecordForm: React.FC<RecordFormProps> = ({ patientId, patientName, current
         navigate(`/patients/${patientId}`);
       }
     } catch (error: any) {
+      console.error('Erro ao registrar prontuário:', error);
       toast({
         title: 'Erro ao registrar',
         description: error.message || 'Ocorreu um erro ao registrar o prontuário',
@@ -100,47 +146,72 @@ const RecordForm: React.FC<RecordFormProps> = ({ patientId, patientName, current
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição *</Label>
+            <Label htmlFor="diagnosis">Diagnóstico *</Label>
             <Textarea 
-              id="description" 
-              name="description"
-              value={formData.description}
+              id="diagnosis" 
+              name="diagnosis"
+              value={formData.diagnosis}
               onChange={handleTextChange}
-              placeholder="Descrição do atendimento"
+              placeholder="Diagnóstico do paciente"
               required
-              rows={2}
+              rows={3}
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="observations">Observações</Label>
+            <Label htmlFor="treatment">Tratamento *</Label>
             <Textarea 
-              id="observations" 
-              name="observations"
-              value={formData.observations}
+              id="treatment" 
+              name="treatment"
+              value={formData.treatment}
               onChange={handleTextChange}
-              placeholder="Observações detalhadas, diagnóstico, procedimentos realizados..."
-              rows={5}
+              placeholder="Plano de tratamento"
+              required
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Observações</Label>
+            <Textarea 
+              id="notes" 
+              name="notes"
+              value={formData.notes}
+              onChange={handleTextChange}
+              placeholder="Observações adicionais..."
+              rows={3}
             />
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="therapistId">Fisioterapeuta Responsável *</Label>
-            <Select 
-              defaultValue={currentUser.id} 
-              onValueChange={handleSelectChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o fisioterapeuta" />
-              </SelectTrigger>
-              <SelectContent>
-                {therapists.map(therapist => (
-                  <SelectItem key={therapist.id} value={therapist.id}>
-                    {therapist.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {therapists.length > 0 ? (
+              <Select 
+                defaultValue={formData.therapistId}
+                value={formData.therapistId || undefined}
+                onValueChange={handleSelectChange}
+                disabled={isLoadingTherapists}
+              >
+                <SelectTrigger id="therapistId">
+                  <SelectValue placeholder={isLoadingTherapists ? "Carregando..." : "Selecione o fisioterapeuta"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {therapists.map(therapist => (
+                    <SelectItem 
+                      key={therapist.id} 
+                      value={therapist.id}
+                    >
+                      {therapist.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-sm text-muted-foreground">Nenhum fisioterapeuta encontrado</p>
+            )}
+            {isLoadingTherapists && (
+              <p className="text-sm text-muted-foreground">Carregando lista de fisioterapeutas...</p>
+            )}
           </div>
         </CardContent>
         
@@ -152,7 +223,7 @@ const RecordForm: React.FC<RecordFormProps> = ({ patientId, patientName, current
           >
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting || isLoadingTherapists}>
             {isSubmitting ? 'Salvando...' : 'Salvar Prontuário'}
           </Button>
         </CardFooter>

@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import AuthForm from '@/components/AuthForm';
 import { useToast } from '@/components/ui/use-toast';
 import { User } from '@/lib/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { login } = useAuth();
 
   useEffect(() => {
     // Check if user is already logged in
@@ -15,23 +16,29 @@ const Index = () => {
     if (storedUser) {
       try {
         const user = JSON.parse(storedUser);
-        setCurrentUser(user);
-        navigate('/dashboard');
+        if (user.token) {
+          navigate('/dashboard');
+        } else {
+          localStorage.removeItem('movi-care-user');
+          localStorage.removeItem('movi-care-token');
+        }
       } catch (error) {
         // Invalid stored user, clear it
         localStorage.removeItem('movi-care-user');
+        localStorage.removeItem('movi-care-token');
       }
     }
   }, [navigate]);
 
   const handleLogin = (token: string, userData: any) => {
-    // Store user in localStorage
-    const user = {
+    // Create user object with token
+    const user: User = {
       ...userData,
       token
     };
-    localStorage.setItem('movi-care-user', JSON.stringify(user));
-    setCurrentUser(user);
+    
+    // Login using AuthContext
+    login(user);
     
     toast({
       title: 'Login bem-sucedido',

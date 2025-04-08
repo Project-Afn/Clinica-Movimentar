@@ -1,4 +1,3 @@
-
 const mongoose = require('mongoose');
 
 const recordSchema = mongoose.Schema({
@@ -7,11 +6,19 @@ const recordSchema = mongoose.Schema({
     required: true,
     ref: 'Patient'
   },
-  description: {
+  patientName: {
     type: String,
     required: true
   },
-  observations: {
+  diagnosis: {
+    type: String,
+    required: true
+  },
+  treatment: {
+    type: String,
+    required: true
+  },
+  notes: {
     type: String
   },
   therapistId: {

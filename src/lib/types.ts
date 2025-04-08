@@ -1,5 +1,6 @@
 export interface User {
   id: string;
+  _id?: string;
   name: string;
   email: string;
   role: 'admin' | 'physiotherapist';
@@ -43,9 +44,9 @@ export interface MedicalRecord {
   therapistName: string;
   diagnosis: string;
   treatment: string;
-  notes: string;
+  notes?: string;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 export interface AuthState {

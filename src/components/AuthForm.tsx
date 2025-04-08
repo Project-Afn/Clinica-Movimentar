@@ -36,11 +36,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
         password
       });
 
+      if (!response.data.token) {
+        throw new Error('Token não recebido do servidor');
+      }
+
       onLogin(response.data.token, {
         id: response.data.id,
         name: response.data.name,
         email: response.data.email,
-        role: response.data.role
+        role: response.data.role,
+        token: response.data.token
       });
 
       toast({

@@ -15,18 +15,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const storedUser = localStorage.getItem('movi-care-user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const userData = JSON.parse(storedUser);
+      setUser(userData);
     }
   }, []);
 
   const login = (userData: User) => {
     setUser(userData);
     localStorage.setItem('movi-care-user', JSON.stringify(userData));
+    if (userData.token) {
+      localStorage.setItem('movi-care-token', userData.token);
+    }
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('movi-care-user');
+    localStorage.removeItem('movi-care-token');
   };
 
   return (
@@ -42,4 +47,6 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};
+
+export default AuthContext; 

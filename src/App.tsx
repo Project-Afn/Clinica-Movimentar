@@ -13,21 +13,67 @@ import RecordDetails from '@/pages/RecordDetails';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect } from 'react';
+import { getPatientById } from '@/services/patientService';
+import { Patient } from '@/lib/types';
 
 const queryClient = new QueryClient();
 
 const RecordFormWrapper = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const [patient, setPatient] = useState<Patient | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (!user || !id) {
-    return null;
+  useEffect(() => {
+    const fetchPatient = async () => {
+      if (!id) return;
+      
+      try {
+        const data = await getPatientById(id);
+        setPatient(data);
+      } catch (error) {
+        console.error('Erro ao buscar paciente:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPatient();
+  }, [id]);
+
+  if (!user || !id || isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <main className="flex-grow p-4 sm:p-6">
+          <div className="app-container">
+            <div className="text-center p-8">
+              <p>Carregando...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!patient) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <main className="flex-grow p-4 sm:p-6">
+          <div className="app-container">
+            <div className="text-center p-8">
+              <p>Paciente não encontrado</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
   }
 
   return (
     <RecordForm
       patientId={id}
-      patientName=""
+      patientName={patient.name}
       currentUser={user}
     />
   );

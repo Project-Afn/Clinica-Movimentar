@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 
 const API_URL = 'http://localhost:5000/api';
@@ -14,16 +13,32 @@ const api = axios.create({
 // Add request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const user = localStorage.getItem('movi-care-user');
-    if (user) {
-      const userData = JSON.parse(user);
-      if (userData.token) {
-        config.headers.Authorization = `Bearer ${userData.token}`;
-      }
+    const token = localStorage.getItem('movi-care-token');
+    console.log('Token encontrado:', token);
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('Headers da requisição:', config.headers);
+    } else {
+      console.log('Nenhum token encontrado');
     }
+    
     return config;
   },
   (error) => {
+    console.error('Erro no interceptor:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for debugging
+api.interceptors.response.use(
+  (response) => {
+    console.log('Resposta da API:', response.status, response.data);
+    return response;
+  },
+  (error) => {
+    console.error('Erro na resposta da API:', error.response?.status, error.response?.data);
     return Promise.reject(error);
   }
 );
