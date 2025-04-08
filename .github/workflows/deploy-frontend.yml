@@ -31,4 +31,4 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
           app_location: "/frontend"
-          output_location: "build"
+          output_location: "dist"
