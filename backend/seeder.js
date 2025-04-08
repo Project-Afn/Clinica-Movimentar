@@ -1,4 +1,3 @@
-
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
@@ -77,56 +76,68 @@ const importData = async () => {
     await User.deleteMany();
     await Patient.deleteMany();
     await Record.deleteMany();
-    
+
     // Create users with hashed passwords
     const hashedUsers = await Promise.all(users.map(async (user) => {
       const salt = await bcrypt.genSalt(10);
       user.password = await bcrypt.hash(user.password, salt);
       return user;
     }));
-    
+
     const createdUsers = await User.insertMany(hashedUsers);
     console.log('Users imported!');
-    
+
     // Create patients
     const createdPatients = await Patient.insertMany(patients);
     console.log('Patients imported!');
-    
+
     // Create some sample records
     const records = [
       {
         patientId: createdPatients[0]._id,
+        patientName: createdPatients[0].name,
         description: 'Avaliação inicial - Dor lombar',
         observations: 'Paciente relata dor lombar há 2 semanas. Recomendado exercícios de fortalecimento e alongamento.',
+        diagnosis: 'Dor lombar aguda',
+        treatment: 'Exercícios de fortalecimento e alongamento',
         therapistId: createdUsers[1]._id,
         therapistName: createdUsers[1].name
       },
       {
         patientId: createdPatients[0]._id,
+        patientName: createdPatients[0].name,
         description: 'Sessão de fisioterapia - Tratamento lombar',
         observations: 'Paciente apresentou melhora significativa após exercícios. Continuar com o tratamento atual.',
+        diagnosis: 'Dor lombar em recuperação',
+        treatment: 'Continuação de fortalecimento lombar',
         therapistId: createdUsers[1]._id,
         therapistName: createdUsers[1].name
       },
       {
         patientId: createdPatients[1]._id,
+        patientName: createdPatients[1].name,
         description: 'Avaliação inicial - Recuperação pós-cirúrgica joelho',
         observations: 'Paciente em recuperação de artroscopia no joelho direito. Iniciado protocolo de reabilitação.',
+        diagnosis: 'Pós-operatório de artroscopia',
+        treatment: 'Reabilitação funcional do joelho',
         therapistId: createdUsers[2]._id,
         therapistName: createdUsers[2].name
       },
       {
         patientId: createdPatients[2]._id,
+        patientName: createdPatients[2].name,
         description: 'Avaliação inicial - Tendinite',
         observations: 'Paciente com tendinite no ombro direito. Iniciado tratamento com ultrassom e exercícios.',
+        diagnosis: 'Tendinite no ombro direito',
+        treatment: 'Ultrassom terapêutico e exercícios de mobilidade',
         therapistId: createdUsers[1]._id,
         therapistName: createdUsers[1].name
       }
     ];
-    
+
     const createdRecords = await Record.insertMany(records);
     console.log('Records imported!');
-    
+
     console.log('Data import complete!');
     process.exit();
   } catch (error) {
@@ -141,7 +152,7 @@ const destroyData = async () => {
     await User.deleteMany();
     await Patient.deleteMany();
     await Record.deleteMany();
-    
+
     console.log('Data destroyed!');
     process.exit();
   } catch (error) {

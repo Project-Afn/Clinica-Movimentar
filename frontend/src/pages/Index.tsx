@@ -60,10 +60,8 @@ const Index = () => {
         
         <div className="mt-8 text-center text-sm text-gray-500">
           <p>Usuários para teste:</p>
-          <p className="mono mt-1">admin@movimentar.com (Administrador)</p>
-          <p className="mono">maria@movimentar.com (Fisioterapeuta)</p>
-          <p className="mono">joao@movimentar.com (Fisioterapeuta)</p>
-          <p className="mt-1">Qualquer senha funciona para estes usuários.</p>
+          <p className="mono mt-1">Email: admin@movimentar.com</p>
+          <p className="mt-1">Senha: 123456</p>
         </div>
       </div>
       

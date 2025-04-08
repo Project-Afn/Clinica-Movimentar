@@ -31,7 +31,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
     setIsLoading(true);
     
     try {
-      const response = await axios.post('http://localhost:5000/api/users/login', {
+      const response = await axios.post('https://clinica-backend-app-dev-account.azurewebsites.net/api/users/login', {
         email,
         password
       });
