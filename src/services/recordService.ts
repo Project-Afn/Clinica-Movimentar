@@ -2,16 +2,22 @@ import api from './api';
 import { MedicalRecord } from '@/lib/types';
 
 // Mapping function to transform backend format to frontend format
-const mapRecord = (record: any): MedicalRecord => ({
-  id: record._id || record.id,
-  patientId: record.patientId,
-  diagnosis: record.diagnosis,
-  treatment: record.treatment,
-  notes: record.notes || '',
-  therapistId: record.therapistId,
-  therapistName: record.therapistName,
-  createdAt: record.createdAt
-});
+const mapRecord = (record: any): MedicalRecord => {
+  console.log('Mapeando prontuário:', record);
+  const mappedRecord = {
+    id: record._id || record.id,
+    patientId: record.patientId,
+    patientName: record.patientName,
+    diagnosis: record.diagnosis,
+    treatment: record.treatment,
+    notes: record.notes || '',
+    therapistId: record.therapistId,
+    therapistName: record.therapistName,
+    createdAt: record.createdAt
+  };
+  console.log('Prontuário mapeado:', mappedRecord);
+  return mappedRecord;
+};
 
 export const getRecords = async (): Promise<MedicalRecord[]> => {
   try {
@@ -24,9 +30,20 @@ export const getRecords = async (): Promise<MedicalRecord[]> => {
 
 export const getPatientRecords = async (patientId: string): Promise<MedicalRecord[]> => {
   try {
+    console.log('Buscando prontuários para o paciente:', patientId);
     const response = await api.get(`/records/patient/${patientId}`);
-    return response.data.map(mapRecord);
+    console.log('Resposta da API para prontuários:', response.data);
+    
+    if (!response.data || !Array.isArray(response.data)) {
+      console.error('Dados inválidos recebidos:', response.data);
+      return [];
+    }
+    
+    const mappedRecords = response.data.map(mapRecord);
+    console.log('Prontuários mapeados:', mappedRecords);
+    return mappedRecords;
   } catch (error: any) {
+    console.error('Erro ao buscar prontuários:', error);
     throw new Error(error.response?.data?.message || 'Erro ao buscar prontuários do paciente');
   }
 };

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,80 +7,99 @@ import Navbar from '@/components/Navbar';
 import RecordCard from '@/components/RecordCard';
 import RecordForm from '@/components/RecordForm';
 import { User, FileText, Plus, PlusCircle } from 'lucide-react';
-import { getPatientById, getPatientRecords } from '@/lib/mockData';
 import { Patient, User as UserType, MedicalRecord } from '@/lib/types';
+import { getPatientById } from '@/services/patientService';
+import { getPatientRecords } from '@/services/recordService';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PatientDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const { user, logout } = useAuth();
   
-  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [showNewRecordForm, setShowNewRecordForm] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem('movi-care-user');
-    if (!storedUser) {
-      navigate('/');
-      return;
-    }
-
-    try {
-      const user = JSON.parse(storedUser);
-      setCurrentUser(user);
-      
+    const fetchData = async () => {
       if (!id) {
         navigate('/patients');
         return;
       }
-      
-      // Get patient and their records
-      const patientData = getPatientById(id);
-      if (!patientData) {
+
+      try {
+        setIsLoading(true);
+        console.log('Buscando dados do paciente:', id);
+        const [patientData, patientRecords] = await Promise.all([
+          getPatientById(id),
+          getPatientRecords(id)
+        ]);
+        
+        console.log('Dados do paciente:', patientData);
+        console.log('Prontuários recebidos:', patientRecords);
+        
+        if (!patientData) {
+          throw new Error('Paciente não encontrado');
+        }
+
+        setPatient(patientData);
+        
+        if (patientRecords && patientRecords.length > 0) {
+          console.log('Ordenando prontuários...');
+          const sortedRecords = patientRecords.sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          console.log('Prontuários ordenados:', sortedRecords);
+          setRecords(sortedRecords);
+        } else {
+          console.log('Nenhum prontuário encontrado');
+          setRecords([]);
+        }
+      } catch (error: any) {
+        console.error('Erro ao buscar dados:', error);
         toast({
-          title: 'Paciente não encontrado',
-          description: 'O paciente solicitado não foi encontrado',
+          title: 'Erro ao buscar dados',
+          description: error.message || 'Ocorreu um erro ao carregar os dados do paciente',
           variant: 'destructive'
         });
         navigate('/patients');
-        return;
+      } finally {
+        setIsLoading(false);
       }
-      
-      setPatient(patientData);
-      
-      const patientRecords = getPatientRecords(id);
-      const sortedRecords = [...patientRecords].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      setRecords(sortedRecords);
-    } catch (error) {
-      localStorage.removeItem('movi-care-user');
-      navigate('/');
-    }
+    };
+
+    fetchData();
   }, [navigate, id, toast]);
 
   const handleLogout = () => {
-    localStorage.removeItem('movi-care-user');
+    logout();
     navigate('/');
   };
 
-  const handleAddRecordSuccess = () => {
+  const handleAddRecordSuccess = async () => {
     setShowNewRecordForm(false);
     
-    // Refresh records list
-    if (id) {
-      const patientRecords = getPatientRecords(id);
-      const sortedRecords = [...patientRecords].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      setRecords(sortedRecords);
-      
+    try {
+      if (id) {
+        const patientRecords = await getPatientRecords(id);
+        setRecords(patientRecords.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ));
+        
+        toast({
+          title: 'Prontuário adicionado',
+          description: 'Prontuário foi adicionado com sucesso'
+        });
+      }
+    } catch (error: any) {
+      console.error('Erro ao atualizar lista de prontuários:', error);
       toast({
-        title: 'Prontuário adicionado',
-        description: 'Prontuário foi adicionado com sucesso'
+        title: 'Erro ao atualizar lista',
+        description: 'Não foi possível atualizar a lista de prontuários',
+        variant: 'destructive'
       });
     }
   };
@@ -92,15 +110,39 @@ const PatientDetail: React.FC = () => {
     return date.toLocaleDateString('pt-BR');
   };
 
-  if (!currentUser || !patient) {
-    return <div>Carregando...</div>;
+  if (!user || isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <main className="flex-grow p-4 sm:p-6">
+          <div className="app-container">
+            <div className="text-center p-8">
+              <p>Carregando...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!patient) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <main className="flex-grow p-4 sm:p-6">
+          <div className="app-container">
+            <div className="text-center p-8">
+              <p>Paciente não encontrado</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar 
-        userName={currentUser.name} 
-        userRole={currentUser.role === 'admin' ? 'Administrador' : 'Fisioterapeuta'} 
+        userName={user.name} 
+        userRole={user.role === 'admin' ? 'Administrador' : 'Fisioterapeuta'} 
         onLogout={handleLogout} 
       />
       
@@ -138,7 +180,7 @@ const PatientDetail: React.FC = () => {
                 <RecordForm 
                   patientId={patient.id} 
                   patientName={patient.name}
-                  currentUser={currentUser}
+                  currentUser={user}
                   onSuccess={handleAddRecordSuccess}
                 />
               </div>
@@ -162,11 +204,52 @@ const PatientDetail: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500"><span className="font-medium">Telefone:</span> {patient.phone || 'Não informado'}</p>
-                    <p className="text-sm text-gray-500"><span className="font-medium">Endereço:</span> {patient.address || 'Não informado'}</p>
+                    <p className="text-sm text-gray-500"><span className="font-medium">Endereço:</span> {patient.address ? `${patient.address.street}, ${patient.address.number} - ${patient.address.city}/${patient.address.state}` : 'Não informado'}</p>
                     <p className="text-sm text-gray-500">
                       <span className="font-medium">Cadastrado em:</span> {formatDate(patient.createdAt)}
                     </p>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="mb-6">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <FileText className="h-5 w-5 mr-2 text-primary" />
+                  Histórico de Prontuários
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {records.length > 0 ? (
+                    records.map(record => {
+                      console.log('Renderizando prontuário:', record);
+                      return (
+                        <div key={record.id} className="border rounded-lg p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-medium">{record.diagnosis}</h3>
+                            <span className="text-sm text-gray-500">{formatDate(record.createdAt)}</span>
+                          </div>
+                          <div className="mb-2">
+                            <p className="text-sm font-medium">Tratamento:</p>
+                            <p className="text-sm whitespace-pre-line">{record.treatment}</p>
+                          </div>
+                          {record.notes && (
+                            <div className="mb-2">
+                              <p className="text-sm font-medium">Observações:</p>
+                              <p className="text-sm whitespace-pre-line">{record.notes}</p>
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-500">
+                            <p>Fisioterapeuta: {record.therapistName}</p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-center text-gray-500">Nenhum prontuário registrado</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
