@@ -1,4 +1,3 @@
-
 const User = require('../models/userModel');
 const jwt = require('jsonwebtoken');
 
@@ -23,7 +22,6 @@ const loginUser = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
         token: generateToken(user._id)
       });
     } else {
