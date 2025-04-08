@@ -65,7 +65,10 @@ cd frontend
 npm run dev
 ```
 
-3. Acesse a aplicação em `http://localhost:5173`
+3. Acesse a aplicação em 
+```bash
+`http://localhost:5173`
+```
 
 ## 📦 Estrutura do Projeto
 
