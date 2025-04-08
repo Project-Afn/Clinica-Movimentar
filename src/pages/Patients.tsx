@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,40 +5,35 @@ import { Input } from '@/components/ui/input';
 import Navbar from '@/components/Navbar';
 import PatientCard from '@/components/PatientCard';
 import { PlusCircle, Search } from 'lucide-react';
-import { getPatients } from '@/lib/mockData';
+import { getPatients } from '@/services/patientService';
 import { Patient, User } from '@/lib/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Patients: React.FC = () => {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { user, logout } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem('movi-care-user');
-    if (!storedUser) {
-      navigate('/');
-      return;
-    }
+    const fetchPatients = async () => {
+      try {
+        const data = await getPatients();
+        setPatients(data);
+        setFilteredPatients(data);
+      } catch (error) {
+        console.error('Erro ao buscar pacientes:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    try {
-      const user = JSON.parse(storedUser);
-      setCurrentUser(user);
-      
-      // Get all patients
-      const allPatients = getPatients();
-      setPatients(allPatients);
-      setFilteredPatients(allPatients);
-    } catch (error) {
-      localStorage.removeItem('movi-care-user');
-      navigate('/');
-    }
-  }, [navigate]);
+    fetchPatients();
+  }, []);
 
   useEffect(() => {
-    // Filter patients based on search query
     if (searchQuery.trim() === '') {
       setFilteredPatients(patients);
     } else {
@@ -54,21 +48,35 @@ const Patients: React.FC = () => {
     }
   }, [searchQuery, patients]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('movi-care-user');
-    navigate('/');
-  };
+  if (!user) {
+    return null;
+  }
 
-  if (!currentUser) {
-    return <div>Carregando...</div>;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Navbar 
+          userName={user.name} 
+          userRole={user.role === 'admin' ? 'Administrador' : 'Fisioterapeuta'} 
+          onLogout={logout}
+        />
+        <main className="flex-grow p-4 sm:p-6">
+          <div className="app-container">
+            <div className="text-center p-8">
+              <p>Carregando pacientes...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar 
-        userName={currentUser.name} 
-        userRole={currentUser.role === 'admin' ? 'Administrador' : 'Fisioterapeuta'} 
-        onLogout={handleLogout} 
+        userName={user.name} 
+        userRole={user.role === 'admin' ? 'Administrador' : 'Fisioterapeuta'} 
+        onLogout={logout}
       />
       
       <main className="flex-grow p-4 sm:p-6">

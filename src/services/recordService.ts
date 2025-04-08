@@ -1,4 +1,3 @@
-
 import api from './api';
 import { MedicalRecord } from '@/lib/types';
 
@@ -40,12 +39,7 @@ export const getRecordById = async (id: string): Promise<MedicalRecord> => {
   }
 };
 
-export const createRecord = async (record: {
-  patientId: string;
-  description: string;
-  observations?: string;
-  therapistId: string;
-}): Promise<MedicalRecord> => {
+export const createRecord = async (record: Omit<MedicalRecord, 'id' | 'therapistName' | 'createdAt'>): Promise<MedicalRecord> => {
   try {
     const response = await api.post('/records', record);
     return mapRecord(response.data);

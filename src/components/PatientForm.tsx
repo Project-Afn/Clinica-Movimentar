@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
@@ -7,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { addPatient } from '@/lib/mockData';
+import { createPatient } from '@/services/patientService';
 
 const PatientForm: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -43,21 +42,18 @@ const PatientForm: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      // Simulate API call delay
-      setTimeout(() => {
-        const newPatient = addPatient(formData);
-        
-        toast({
-          title: 'Paciente cadastrado',
-          description: `${newPatient.name} foi cadastrado com sucesso`
-        });
-        
-        navigate('/patients');
-      }, 1000);
-    } catch (error) {
+      await createPatient(formData);
+      
+      toast({
+        title: 'Paciente cadastrado',
+        description: `${formData.name} foi cadastrado com sucesso`
+      });
+      
+      navigate('/patients');
+    } catch (error: any) {
       toast({
         title: 'Erro ao cadastrar',
-        description: 'Ocorreu um erro ao cadastrar o paciente',
+        description: error.message || 'Ocorreu um erro ao cadastrar o paciente',
         variant: 'destructive'
       });
     } finally {

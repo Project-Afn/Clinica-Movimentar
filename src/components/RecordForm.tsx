@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
@@ -7,8 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { addMedicalRecord, mockUsers } from '@/lib/mockData';
+import { createRecord } from '@/services/recordService';
 import { User } from '@/lib/types';
+import api from '@/services/api';
 
 interface RecordFormProps {
   patientId: string;
@@ -30,9 +30,16 @@ const RecordForm: React.FC<RecordFormProps> = ({ patientId, patientName, current
   const { toast } = useToast();
 
   useEffect(() => {
-    // Get only physiotherapist users
-    const physiotherapists = mockUsers.filter(user => user.role === 'physiotherapist');
-    setTherapists(physiotherapists);
+    const fetchTherapists = async () => {
+      try {
+        const response = await api.get('/users');
+        const physiotherapists = response.data.filter((user: User) => user.role === 'physiotherapist');
+        setTherapists(physiotherapists);
+      } catch (error) {
+        console.error('Erro ao buscar fisioterapeutas:', error);
+      }
+    };
+    fetchTherapists();
   }, []);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -59,28 +66,25 @@ const RecordForm: React.FC<RecordFormProps> = ({ patientId, patientName, current
     setIsSubmitting(true);
     
     try {
-      // Simulate API call delay
-      setTimeout(() => {
-        addMedicalRecord({
-          ...formData,
-          patientId
-        });
-        
-        toast({
-          title: 'Prontuário registrado',
-          description: 'O prontuário foi registrado com sucesso'
-        });
-        
-        if (onSuccess) {
-          onSuccess();
-        } else {
-          navigate(`/patients/${patientId}`);
-        }
-      }, 1000);
-    } catch (error) {
+      await createRecord({
+        ...formData,
+        patientId
+      });
+      
+      toast({
+        title: 'Prontuário registrado',
+        description: 'O prontuário foi registrado com sucesso'
+      });
+      
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate(`/patients/${patientId}`);
+      }
+    } catch (error: any) {
       toast({
         title: 'Erro ao registrar',
-        description: 'Ocorreu um erro ao registrar o prontuário',
+        description: error.message || 'Ocorreu um erro ao registrar o prontuário',
         variant: 'destructive'
       });
     } finally {
