@@ -1,9 +1,9 @@
-# 🏥 Clínica Movimentar - Sistema de Fisioterapia
+# 🏥 Clínica Movimentar - Sistema de Gestão de Clínicas
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-O Clínica Movimentar é um sistema completo de gestão para clínicas de fisioterapia, desenvolvido com tecnologias modernas e focado em proporcionar uma experiência eficiente tanto para profissionais quanto para pacientes.
+O Clínica Movimentar é um sistema completo de gestão para clínicas, desenvolvido com tecnologias modernas e focado em proporcionar uma experiência eficiente tanto para profissionais quanto para pacientes.
 
 ## 🚀 Tecnologias Utilizadas
 
